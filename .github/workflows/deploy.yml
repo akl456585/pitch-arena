@@ -20,7 +20,7 @@ jobs:
 
       - name: Set SSH target
         run: |
-          echo "SSH_CMD=ssh -i ~/.ssh/utayo_deploy -o StrictHostKeyChecking=no admin@172.19.0.234" >> $GITHUB_ENV
+          echo "SSH_CMD=ssh -i /home/admin/.ssh/utayo_deploy -o StrictHostKeyChecking=no admin@172.19.0.234" >> $GITHUB_ENV
           echo "SSH_TARGET=admin@172.19.0.234" >> $GITHUB_ENV
 
       - name: Sync code to app server
@@ -30,7 +30,7 @@ jobs:
             --exclude '.git/' \
             --exclude 'node_modules/' \
             --exclude 'data/' \
-            -e "ssh -i ~/.ssh/utayo_deploy -o StrictHostKeyChecking=no" \
+            -e "ssh -i /home/admin/.ssh/utayo_deploy -o StrictHostKeyChecking=no" \
             ./ $SSH_TARGET:~/pitch-arena/
 
       - name: Build and deploy
