@@ -2,6 +2,7 @@ import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { InvestPanel } from "@/app/components/InvestPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -147,6 +148,11 @@ export default async function IdeaPage({
           </div>
         </div>
       </div>
+
+      {/* Investment Panel */}
+      <section className="mb-8">
+        <InvestPanel ideaId={idea.id} />
+      </section>
 
       {/* Pitch Deck */}
       <section className="mb-10">

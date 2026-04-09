@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { UserBalance } from "@/app/components/UserBalance";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -37,17 +38,20 @@ export default function RootLayout({
                 Pitch Arena
               </span>
             </a>
-            <nav className="flex gap-4 text-sm text-zinc-400">
-              <a href="/" className="hover:text-white transition-colors">
-                Feed
-              </a>
-              <a
-                href="/leaderboard"
-                className="hover:text-white transition-colors"
-              >
-                Leaderboard
-              </a>
-            </nav>
+            <div className="flex items-center gap-4">
+              <nav className="flex gap-4 text-sm text-zinc-400">
+                <a href="/" className="hover:text-white transition-colors">
+                  Feed
+                </a>
+                <a
+                  href="/leaderboard"
+                  className="hover:text-white transition-colors"
+                >
+                  Leaderboard
+                </a>
+              </nav>
+              <UserBalance />
+            </div>
           </div>
         </header>
         <main className="flex-1">{children}</main>
