@@ -3,8 +3,42 @@ import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { InvestPanel } from "@/app/components/InvestPanel";
+import { ShareButton } from "@/app/components/ShareButton";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const [idea] = db
+    .select()
+    .from(schema.ideas)
+    .where(eq(schema.ideas.id, Number(id)))
+    .limit(1)
+    .all();
+
+  if (!idea) return { title: "Not Found" };
+
+  return {
+    title: `${idea.name} — Pitch Arena`,
+    description: idea.tagline,
+    openGraph: {
+      title: `${idea.logoEmoji} ${idea.name} — Score: ${(idea.overallScore || 0).toFixed(1)}/10`,
+      description: idea.tagline,
+      images: [`/api/og?id=${idea.id}`],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${idea.logoEmoji} ${idea.name}`,
+      description: idea.tagline,
+      images: [`/api/og?id=${idea.id}`],
+    },
+  };
+}
 
 function ScoreBar({ label, value }: { label: string; value: number }) {
   const pct = (value / 10) * 100;
@@ -124,12 +158,15 @@ export default async function IdeaPage({
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      <Link
-        href="/"
-        className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors mb-6 inline-block"
-      >
-        ← Back to Feed
-      </Link>
+      <div className="flex items-center justify-between mb-6">
+        <Link
+          href="/"
+          className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+        >
+          ← Back to Feed
+        </Link>
+        <ShareButton ideaId={idea.id} ideaName={idea.name} />
+      </div>
 
       {/* Header */}
       <div className="flex items-start gap-4 mb-8">
