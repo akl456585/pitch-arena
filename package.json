@@ -3,21 +3,29 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3333",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:migrate": "npx tsx src/db/migrate.ts",
+    "db:seed": "npx tsx src/scripts/seed.ts",
+    "generate": "npx tsx src/scripts/generate-idea.ts"
   },
   "dependencies": {
+    "better-sqlite3": "^12.8.0",
+    "drizzle-orm": "^0.45.2",
     "next": "16.2.3",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/bun": "^1.3.11",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
     "tailwindcss": "^4",
@@ -28,6 +36,8 @@
     "unrs-resolver"
   ],
   "trustedDependencies": [
+    "better-sqlite3",
+    "esbuild",
     "sharp",
     "unrs-resolver"
   ]
