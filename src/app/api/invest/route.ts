@@ -18,12 +18,11 @@ export async function POST(request: Request) {
   }
 
   // Get idea
-  const [idea] = db
+  const [idea] = await db
     .select()
     .from(schema.ideas)
     .where(eq(schema.ideas.id, ideaId))
-    .limit(1)
-    .all();
+    .limit(1);
 
   if (!idea) {
     return Response.json({ error: "Idea not found" }, { status: 404 });
@@ -32,39 +31,35 @@ export async function POST(request: Request) {
   const currentValuation = idea.valuation || 1000;
 
   // Create investment
-  db.insert(schema.investments)
-    .values({
-      userId: user.id,
-      ideaId,
-      amount,
-      priceAtInvestment: currentValuation,
-    })
-    .run();
+  await db.insert(schema.investments).values({
+    userId: user.id,
+    ideaId,
+    amount,
+    priceAtInvestment: currentValuation,
+  });
 
   // Deduct from user balance
-  db.update(schema.users)
+  await db
+    .update(schema.users)
     .set({ balance: sql`${schema.users.balance} - ${amount}` })
-    .where(eq(schema.users.id, user.id))
-    .run();
+    .where(eq(schema.users.id, user.id));
 
   // Increase idea's total invested and valuation
-  // Valuation increases proportionally to investment
   const valuationBoost = amount * 0.1;
-  db.update(schema.ideas)
+  await db
+    .update(schema.ideas)
     .set({
       totalInvested: sql`${schema.ideas.totalInvested} + ${amount}`,
       valuation: sql`${schema.ideas.valuation} + ${valuationBoost}`,
     })
-    .where(eq(schema.ideas.id, ideaId))
-    .run();
+    .where(eq(schema.ideas.id, ideaId));
 
   // Fetch updated user
-  const [updatedUser] = db
+  const [updatedUser] = await db
     .select()
     .from(schema.users)
     .where(eq(schema.users.id, user.id))
-    .limit(1)
-    .all();
+    .limit(1);
 
   return Response.json({
     success: true,

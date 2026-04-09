@@ -1,12 +1,12 @@
 {
   "version": "7",
-  "dialect": "sqlite",
+  "dialect": "mysql",
   "entries": [
     {
       "idx": 0,
-      "version": "6",
-      "when": 1775726843413,
-      "tag": "0000_powerful_gargoyle",
+      "version": "5",
+      "when": 1775744390820,
+      "tag": "0000_flaky_james_howlett",
       "breakpoints": true
     }
   ]

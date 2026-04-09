@@ -51,13 +51,12 @@ function IdeaCard({ idea }: { idea: typeof schema.ideas.$inferSelect }) {
   );
 }
 
-export default function Home() {
-  const ideas = db
+export default async function Home() {
+  const ideas = await db
     .select()
     .from(schema.ideas)
     .orderBy(desc(schema.ideas.id))
-    .limit(20)
-    .all();
+    .limit(20);
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
@@ -75,7 +74,7 @@ export default function Home() {
           <p className="text-sm mt-1">
             Run{" "}
             <code className="bg-zinc-800 px-2 py-0.5 rounded text-xs">
-              bun run src/scripts/generate-idea.ts
+              npm run generate
             </code>{" "}
             to generate the first one.
           </p>

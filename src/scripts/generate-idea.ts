@@ -2,18 +2,15 @@
  * Generates a startup idea + pitch deck + judge evaluations using Claude Code CLI.
  * Run: npx tsx src/scripts/generate-idea.ts
  */
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
+
 import { execSync } from "child_process";
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
 import { eq } from "drizzle-orm";
 import * as schema from "../db/schema";
 import { JUDGES } from "../lib/judges";
-import path from "path";
-
-const dbPath = path.join(process.cwd(), "data", "pitch-arena.db");
-const sqlite = new Database(dbPath);
-sqlite.pragma("journal_mode = WAL");
-const db = drizzle(sqlite, { schema });
 
 const CATEGORIES = [
   "SaaS", "Consumer", "Marketplace", "Fintech", "Health", "Education",
@@ -47,7 +44,17 @@ function extractJSON(text: string): Record<string, unknown> {
   return JSON.parse(jsonMatch[1]);
 }
 
-function generateIdea(): void {
+async function generateIdea(): Promise<void> {
+  const connection = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT || 3306),
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+  });
+
+  const db = drizzle(connection, { schema, mode: "default" });
+
   const category = pickRandom(CATEGORIES);
   console.log(`Generating idea in category: ${category}`);
 
@@ -79,29 +86,31 @@ Be creative and specific. Mix realistic viable ideas with occasional wild moonsh
   console.log(`Generated idea: ${idea.name}`);
 
   // Insert idea into database
-  const result = db
-    .insert(schema.ideas)
-    .values({
-      name: idea.name as string,
-      tagline: idea.tagline as string,
-      category: idea.category as string,
-      logoEmoji: idea.logoEmoji as string,
-      problem: idea.problem as string,
-      solution: idea.solution as string,
-      targetMarket: idea.targetMarket as string,
-      tam: idea.tam as string,
-      businessModel: idea.businessModel as string,
-      pricing: idea.pricing as string,
-      competitors: idea.competitors as string,
-      goToMarket: idea.goToMarket as string,
-      financials: JSON.stringify(idea.financials),
-      risks: idea.risks as string,
-      techStack: idea.techStack as string,
-    })
-    .returning()
-    .all();
+  const result = await db.insert(schema.ideas).values({
+    name: idea.name as string,
+    tagline: idea.tagline as string,
+    category: idea.category as string,
+    logoEmoji: idea.logoEmoji as string,
+    problem: idea.problem as string,
+    solution: idea.solution as string,
+    targetMarket: idea.targetMarket as string,
+    tam: idea.tam as string,
+    businessModel: idea.businessModel as string,
+    pricing: idea.pricing as string,
+    competitors: idea.competitors as string,
+    goToMarket: idea.goToMarket as string,
+    financials: JSON.stringify(idea.financials),
+    risks: idea.risks as string,
+    techStack: idea.techStack as string,
+  });
 
-  const insertedIdea = result[0];
+  const insertId = result[0].insertId;
+  const [insertedIdea] = await db
+    .select()
+    .from(schema.ideas)
+    .where(eq(schema.ideas.id, insertId))
+    .limit(1);
+
   console.log(`Inserted idea #${insertedIdea.id}: ${insertedIdea.name}`);
 
   // Generate judge evaluations
@@ -142,7 +151,7 @@ Stay in character. Be opinionated. ${judge.style}.`;
     const judgeResponse = callClaude(judgePrompt);
     const evaluation = extractJSON(judgeResponse);
 
-    db.insert(schema.judgements).values({
+    await db.insert(schema.judgements).values({
       ideaId: insertedIdea.id,
       judgeName: judge.name,
       judgePersona: judge.focus,
@@ -154,30 +163,32 @@ Stay in character. Be opinionated. ${judge.style}.`;
       verdict: evaluation.verdict as string,
       investOrPass: evaluation.investOrPass as string,
       rebuttals: (evaluation.rebuttals as string) || null,
-    }).run();
+    });
 
     console.log(`  ${judge.name}: ${evaluation.investOrPass} (${evaluation.innovation}/${evaluation.feasibility}/${evaluation.marketFit}/${evaluation.scalability}/${evaluation.xFactor})`);
   }
 
   // Calculate overall score
-  const allJudgements = db
+  const allJudgements = await db
     .select()
     .from(schema.judgements)
-    .where(eq(schema.judgements.ideaId, insertedIdea.id))
-    .all();
+    .where(eq(schema.judgements.ideaId, insertedIdea.id));
 
   const totalScore = allJudgements.reduce((sum, j) => {
     return sum + (j.innovation + j.feasibility + j.marketFit + j.scalability + j.xFactor) / 5;
   }, 0);
   const avgScore = totalScore / allJudgements.length;
 
-  db.update(schema.ideas)
+  await db
+    .update(schema.ideas)
     .set({ overallScore: Math.round(avgScore * 10) / 10 })
-    .where(eq(schema.ideas.id, insertedIdea.id))
-    .run();
+    .where(eq(schema.ideas.id, insertedIdea.id));
 
   console.log(`\nDone! "${idea.name}" — Overall Score: ${avgScore.toFixed(1)}/10`);
-  sqlite.close();
+  await connection.end();
 }
 
-generateIdea();
+generateIdea().catch((err) => {
+  console.error("Generation failed:", err);
+  process.exit(1);
+});

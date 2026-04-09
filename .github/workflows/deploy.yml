@@ -29,9 +29,31 @@ jobs:
           rsync -az --delete \
             --exclude '.git/' \
             --exclude 'node_modules/' \
-            --exclude 'data/' \
+            --exclude '.env*' \
             -e "ssh -i /home/admin/.ssh/utayo_deploy -o StrictHostKeyChecking=no" \
             ./ $SSH_TARGET:~/pitch-arena/
+
+      - name: Create env file
+        run: |
+          $SSH_CMD bash -s << 'SCRIPT'
+          set -e
+          cat > ~/pitch-arena/.env.production << EOF
+          DB_HOST=${{ vars.DB_HOST }}
+          DB_PORT=${{ vars.DB_PORT }}
+          DB_USER=${{ vars.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          DB_NAME=${{ vars.DB_NAME }}
+          EOF
+          SCRIPT
+
+      - name: Run migrations
+        run: |
+          $SSH_CMD bash -s << 'SCRIPT'
+          set -e
+          cd ~/pitch-arena
+          npm install --omit=dev 2>/dev/null || true
+          NODE_ENV=production npx tsx src/db/migrate.ts
+          SCRIPT
 
       - name: Build and deploy
         run: |
@@ -48,12 +70,12 @@ jobs:
           echo "Waiting for health check..."
           for i in $(seq 1 30); do
             if docker inspect --format='{{.State.Health.Status}}' pitch-arena 2>/dev/null | grep -q healthy; then
-              echo "✅ Deploy successful — pitch-arena is running"
+              echo "Deploy successful — pitch-arena is running"
               exit 0
             fi
             sleep 2
           done
-          echo "⚠️ Health check not passing yet, checking logs..."
+          echo "Health check not passing yet, checking logs..."
           docker logs pitch-arena --tail 10
           exit 1
           SCRIPT

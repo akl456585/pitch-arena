@@ -1,24 +1,32 @@
-import Database from "better-sqlite3";
-import path from "path";
-import fs from "fs";
+import dotenv from "dotenv";
+import { drizzle } from "drizzle-orm/mysql2";
+import { migrate } from "drizzle-orm/mysql2/migrator";
+import mysql from "mysql2/promise";
 
-const dbPath = path.join(__dirname, "../../data/pitch-arena.db");
-const sqlDir = path.join(__dirname, "../../drizzle");
+dotenv.config({
+  path: process.env.NODE_ENV === "production" ? ".env.production" : ".env.local",
+});
 
-const sqlite = new Database(dbPath);
-sqlite.pragma("journal_mode = WAL");
+async function runMigration() {
+  const connection = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT || 3306),
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    multipleStatements: true,
+  });
 
-const files = fs.readdirSync(sqlDir).filter((f) => f.endsWith(".sql")).sort();
+  const db = drizzle(connection);
 
-for (const file of files) {
-  const sql = fs.readFileSync(path.join(sqlDir, file), "utf-8");
-  const statements = sql.split("--> statement-breakpoint");
-  for (const stmt of statements) {
-    const trimmed = stmt.trim();
-    if (trimmed) sqlite.exec(trimmed);
-  }
-  console.log(`Applied: ${file}`);
+  console.log("Running migrations...");
+  await migrate(db, { migrationsFolder: "./drizzle" });
+  console.log("Migration complete.");
+
+  await connection.end();
 }
 
-console.log("Migration complete.");
-sqlite.close();
+runMigration().catch((err) => {
+  console.error("Migration failed:", err);
+  process.exit(1);
+});

@@ -37,22 +37,20 @@ export async function GET(request: Request) {
     );
   }
 
-  const [idea] = db
+  const [idea] = await db
     .select()
     .from(schema.ideas)
     .where(eq(schema.ideas.id, ideaId))
-    .limit(1)
-    .all();
+    .limit(1);
 
   if (!idea) {
     return new Response("Not found", { status: 404 });
   }
 
-  const judgements = db
+  const judgements = await db
     .select()
     .from(schema.judgements)
-    .where(eq(schema.judgements.ideaId, ideaId))
-    .all();
+    .where(eq(schema.judgements.ideaId, ideaId));
 
   const investCount = judgements.filter((j) => j.investOrPass === "invest").length;
   const scoreColor =

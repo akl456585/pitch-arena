@@ -14,12 +14,11 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const [idea] = db
+  const [idea] = await db
     .select()
     .from(schema.ideas)
     .where(eq(schema.ideas.id, Number(id)))
-    .limit(1)
-    .all();
+    .limit(1);
 
   if (!idea) return { title: "Not Found" };
 
@@ -128,26 +127,23 @@ export default async function IdeaPage({
   const { id } = await params;
   const ideaId = Number(id);
 
-  const [idea] = db
+  const [idea] = await db
     .select()
     .from(schema.ideas)
     .where(eq(schema.ideas.id, ideaId))
-    .limit(1)
-    .all();
+    .limit(1);
 
   if (!idea) notFound();
 
-  const judgements = db
+  const judgements = await db
     .select()
     .from(schema.judgements)
-    .where(eq(schema.judgements.ideaId, ideaId))
-    .all();
+    .where(eq(schema.judgements.ideaId, ideaId));
 
-  const events = db
+  const events = await db
     .select()
     .from(schema.marketEvents)
-    .where(eq(schema.marketEvents.ideaId, ideaId))
-    .all();
+    .where(eq(schema.marketEvents.ideaId, ideaId));
 
   let financials: Record<string, string> = {};
   try {

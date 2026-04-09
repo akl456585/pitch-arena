@@ -1,17 +1,14 @@
 /**
  * Seeds the database with sample data for testing.
- * Run: bun run src/scripts/seed.ts
+ * Run: npm run db:seed
  */
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import * as schema from "../db/schema";
-import { eq } from "drizzle-orm";
-import path from "path";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
 
-const dbPath = path.join(process.cwd(), "data", "pitch-arena.db");
-const sqlite = new Database(dbPath);
-sqlite.pragma("journal_mode = WAL");
-const db = drizzle(sqlite, { schema });
+import { drizzle } from "drizzle-orm/mysql2";
+import mysql from "mysql2/promise";
+import * as schema from "../db/schema";
+import { eq, sql } from "drizzle-orm";
 
 const sampleIdeas = [
   {
@@ -94,53 +91,73 @@ const judgeEvaluations = [
   ],
 ];
 
-// Seed the data
-console.log("Seeding database...");
+async function seed() {
+  const connection = await mysql.createConnection({
+    host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT || 3306),
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+  });
 
-// Delete existing data
-sqlite.exec("DELETE FROM judgements");
-sqlite.exec("DELETE FROM market_events");
-sqlite.exec("DELETE FROM ideas");
+  const db = drizzle(connection, { schema, mode: "default" });
 
-for (let i = 0; i < sampleIdeas.length; i++) {
-  const idea = sampleIdeas[i];
-  const result = db.insert(schema.ideas).values(idea).returning().all();
-  const inserted = result[0];
-  console.log(`  Idea #${inserted.id}: ${inserted.name}`);
+  console.log("Seeding database...");
 
-  for (const judge of judgeEvaluations[i]) {
-    db.insert(schema.judgements)
-      .values({ ideaId: inserted.id, ...judge })
-      .run();
+  // Delete existing data
+  await connection.execute("DELETE FROM judgements");
+  await connection.execute("DELETE FROM market_events");
+  await connection.execute("DELETE FROM investments");
+  await connection.execute("DELETE FROM ideas");
+
+  for (let i = 0; i < sampleIdeas.length; i++) {
+    const idea = sampleIdeas[i];
+    const result = await db.insert(schema.ideas).values(idea);
+    const insertId = result[0].insertId;
+
+    const [inserted] = await db
+      .select()
+      .from(schema.ideas)
+      .where(eq(schema.ideas.id, insertId))
+      .limit(1);
+
+    console.log(`  Idea #${inserted.id}: ${inserted.name}`);
+
+    for (const judge of judgeEvaluations[i]) {
+      await db.insert(schema.judgements).values({ ideaId: inserted.id, ...judge });
+    }
+
+    // Calculate overall score
+    const allJudge = judgeEvaluations[i];
+    const totalScore = allJudge.reduce((sum, j) => {
+      return sum + (j.innovation + j.feasibility + j.marketFit + j.scalability + j.xFactor) / 5;
+    }, 0);
+    const avgScore = totalScore / allJudge.length;
+
+    await db
+      .update(schema.ideas)
+      .set({ overallScore: Math.round(avgScore * 10) / 10 })
+      .where(eq(schema.ideas.id, inserted.id));
+
+    console.log(`    Score: ${avgScore.toFixed(1)}/10`);
   }
 
-  // Calculate overall score
-  const allJudge = judgeEvaluations[i];
-  const totalScore = allJudge.reduce((sum, j) => {
-    return sum + (j.innovation + j.feasibility + j.marketFit + j.scalability + j.xFactor) / 5;
-  }, 0);
-  const avgScore = totalScore / allJudge.length;
-
-  db.update(schema.ideas)
-    .set({ overallScore: Math.round(avgScore * 10) / 10 })
-    .where(eq(schema.ideas.id, inserted.id))
-    .run();
-
-  console.log(`    Score: ${avgScore.toFixed(1)}/10`);
-}
-
-// Add a market event
-const ideas = db.select().from(schema.ideas).all();
-if (ideas.length > 0) {
-  db.insert(schema.marketEvents)
-    .values({
+  // Add a market event
+  const ideas = await db.select().from(schema.ideas);
+  if (ideas.length > 0) {
+    await db.insert(schema.marketEvents).values({
       ideaId: ideas[2].id,
       eventText: "TechCrunch reports surge in startup failure prediction tools — validates the market",
       impactPercent: 15,
-    })
-    .run();
-  console.log("  Added market event for DeadPool");
+    });
+    console.log("  Added market event for DeadPool");
+  }
+
+  console.log("\nDone! Seeded 3 ideas with judge evaluations.");
+  await connection.end();
 }
 
-console.log("\nDone! Seeded 3 ideas with judge evaluations.");
-sqlite.close();
+seed().catch((err) => {
+  console.error("Seed failed:", err);
+  process.exit(1);
+});

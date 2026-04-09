@@ -10,28 +10,25 @@ export async function GET(
   const { id } = await params;
   const ideaId = Number(id);
 
-  const [idea] = db
+  const [idea] = await db
     .select()
     .from(schema.ideas)
     .where(eq(schema.ideas.id, ideaId))
-    .limit(1)
-    .all();
+    .limit(1);
 
   if (!idea) {
     return Response.json({ error: "Idea not found" }, { status: 404 });
   }
 
-  const judgements = db
+  const judgements = await db
     .select()
     .from(schema.judgements)
-    .where(eq(schema.judgements.ideaId, ideaId))
-    .all();
+    .where(eq(schema.judgements.ideaId, ideaId));
 
-  const events = db
+  const events = await db
     .select()
     .from(schema.marketEvents)
-    .where(eq(schema.marketEvents.ideaId, ideaId))
-    .all();
+    .where(eq(schema.marketEvents.ideaId, ideaId));
 
   return Response.json({
     ...idea,

@@ -25,12 +25,11 @@ export async function getOrCreateUser() {
 
   if (userIdStr) {
     const userId = Number(userIdStr);
-    const [existing] = db
+    const [existing] = await db
       .select()
       .from(schema.users)
       .where(eq(schema.users.id, userId))
-      .limit(1)
-      .all();
+      .limit(1);
 
     if (existing) return existing;
   }
@@ -39,21 +38,23 @@ export async function getOrCreateUser() {
   let username = generateUsername();
   // Ensure unique
   for (let i = 0; i < 5; i++) {
-    const [clash] = db
+    const [clash] = await db
       .select()
       .from(schema.users)
       .where(eq(schema.users.username, username))
-      .limit(1)
-      .all();
+      .limit(1);
     if (!clash) break;
     username = generateUsername();
   }
 
-  const [newUser] = db
-    .insert(schema.users)
-    .values({ username })
-    .returning()
-    .all();
+  const result = await db.insert(schema.users).values({ username });
+  const insertId = result[0].insertId;
+
+  const [newUser] = await db
+    .select()
+    .from(schema.users)
+    .where(eq(schema.users.id, insertId))
+    .limit(1);
 
   cookieStore.set(COOKIE_NAME, String(newUser.id), {
     httpOnly: true,
