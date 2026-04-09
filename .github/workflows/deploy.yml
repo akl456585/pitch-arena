@@ -1,0 +1,59 @@
+name: Deploy to Alicloud SAS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set SSH target
+        run: |
+          echo "SSH_CMD=ssh -i ~/.ssh/utayo_deploy -o StrictHostKeyChecking=no admin@172.19.0.234" >> $GITHUB_ENV
+          echo "SSH_TARGET=admin@172.19.0.234" >> $GITHUB_ENV
+
+      - name: Sync code to app server
+        run: |
+          set -e
+          rsync -az --delete \
+            --exclude '.git/' \
+            --exclude 'node_modules/' \
+            --exclude 'data/' \
+            -e "ssh -i ~/.ssh/utayo_deploy -o StrictHostKeyChecking=no" \
+            ./ $SSH_TARGET:~/pitch-arena/
+
+      - name: Build and deploy
+        run: |
+          $SSH_CMD bash -s << 'SCRIPT'
+          set -e
+          cd ~/pitch-arena
+          docker compose up -d --build --remove-orphans
+          SCRIPT
+
+      - name: Health check
+        run: |
+          $SSH_CMD bash -s << 'SCRIPT'
+          set -e
+          echo "Waiting for health check..."
+          for i in $(seq 1 30); do
+            if docker inspect --format='{{.State.Health.Status}}' pitch-arena 2>/dev/null | grep -q healthy; then
+              echo "✅ Deploy successful — pitch-arena is running"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "⚠️ Health check not passing yet, checking logs..."
+          docker logs pitch-arena --tail 10
+          exit 1
+          SCRIPT
