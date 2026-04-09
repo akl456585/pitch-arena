@@ -14,6 +14,15 @@ RUN npm install
 COPY . .
 RUN npm run build
 
+# Migrator — lightweight stage for running DB migrations
+FROM base AS migrator
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm install --omit=dev
+COPY drizzle ./drizzle
+COPY src/db/migrate.ts ./src/db/migrate.ts
+CMD ["npx", "tsx", "src/db/migrate.ts"]
+
 # Production
 FROM base AS runner
 WORKDIR /app

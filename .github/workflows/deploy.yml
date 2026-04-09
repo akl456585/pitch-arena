@@ -23,19 +23,6 @@ jobs:
           echo "SSH_CMD=ssh -i /home/admin/.ssh/utayo_deploy -o StrictHostKeyChecking=no admin@172.19.0.234" >> $GITHUB_ENV
           echo "SSH_TARGET=admin@172.19.0.234" >> $GITHUB_ENV
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run migrations
-        env:
-          DB_HOST: ${{ vars.DB_HOST }}
-          DB_PORT: ${{ vars.DB_PORT }}
-          DB_USER: ${{ vars.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_NAME: ${{ vars.DB_NAME }}
-          NODE_ENV: production
-        run: npx tsx src/db/migrate.ts
-
       - name: Sync code to app server
         run: |
           set -e
@@ -57,6 +44,15 @@ jobs:
           DB_PASSWORD=${{ secrets.DB_PASSWORD }}
           DB_NAME=${{ vars.DB_NAME }}
           EOF
+          SCRIPT
+
+      - name: Run migrations
+        run: |
+          $SSH_CMD bash -s << 'SCRIPT'
+          set -e
+          cd ~/pitch-arena
+          docker build --target migrator -t pitch-arena-migrator .
+          docker run --rm --env-file .env.production --network utayo_default pitch-arena-migrator
           SCRIPT
 
       - name: Build and deploy
