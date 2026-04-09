@@ -4,15 +4,15 @@ FROM node:20-alpine AS base
 FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm install
 
 # Build
 FROM base AS builder
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm install
 COPY . .
-RUN npm run db:migrate
+RUN mkdir -p data && npx tsx src/db/migrate.ts
 RUN npm run build
 
 # Production
