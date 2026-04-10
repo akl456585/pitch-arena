@@ -20,8 +20,8 @@ jobs:
 
       - name: Set SSH target
         run: |
-          echo "SSH_CMD=ssh -i /home/admin/.ssh/utayo_deploy -o StrictHostKeyChecking=no admin@172.19.0.234" >> $GITHUB_ENV
-          echo "SSH_TARGET=admin@172.19.0.234" >> $GITHUB_ENV
+          echo "SSH_CMD=ssh -i /home/admin/.ssh/utayo_deploy -o StrictHostKeyChecking=no admin@172.19.0.247" >> $GITHUB_ENV
+          echo "SSH_TARGET=admin@172.19.0.247" >> $GITHUB_ENV
 
       - name: Sync code to app server
         run: |
