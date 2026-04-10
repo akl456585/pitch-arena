@@ -71,24 +71,11 @@ jobs:
           for i in $(seq 1 30); do
             if docker inspect --format='{{.State.Health.Status}}' pitch-arena 2>/dev/null | grep -q healthy; then
               echo "Deploy successful — pitch-arena is running"
-              break
+              exit 0
             fi
             sleep 2
           done
-          SCRIPT
-
-      - name: Diagnostic — verify routes and DB
-        run: |
-          $SSH_CMD bash -s << 'SCRIPT'
-          set -e
-          echo "=== Container info ==="
-          docker ps --filter name=pitch-arena --format '{{.Names}} {{.Status}} {{.Image}}'
-          echo "=== Image created ==="
-          docker inspect pitch-arena --format '{{.Created}} (image: {{.Config.Image}})'
-          echo "=== /api/health from inside docker network ==="
-          docker run --rm --network utayo_default curlimages/curl:latest -sS -m 5 -w "\nHTTP %{http_code}\n" http://pitch-arena:3000/api/health || echo "curl failed"
-          echo "=== / from inside docker network (head) ==="
-          docker run --rm --network utayo_default curlimages/curl:latest -sS -m 5 -o /dev/null -w "HTTP %{http_code}\n" http://pitch-arena:3000/ || echo "curl failed"
-          echo "=== Container logs (last 30) ==="
-          docker logs pitch-arena --tail 30
+          echo "Health check not passing yet, checking logs..."
+          docker logs pitch-arena --tail 10
+          exit 1
           SCRIPT
