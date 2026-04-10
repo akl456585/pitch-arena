@@ -43,6 +43,7 @@ jobs:
           DB_USER=${{ vars.DB_USER }}
           DB_PASSWORD=${{ secrets.DB_PASSWORD }}
           DB_NAME=${{ vars.DB_NAME }}
+          ADMIN_TOKEN=${{ secrets.ADMIN_TOKEN }}
           EOF
           SCRIPT
 

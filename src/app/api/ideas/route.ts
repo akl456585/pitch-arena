@@ -1,5 +1,5 @@
 import { db, schema } from "@/db";
-import { desc } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -12,9 +12,11 @@ export async function GET(request: Request) {
 
   let query = db.select().from(schema.ideas);
 
+  const activeFilter = eq(schema.ideas.status, "active");
   if (category) {
-    const { eq } = await import("drizzle-orm");
-    query = query.where(eq(schema.ideas.category, category)) as typeof query;
+    query = query.where(and(activeFilter, eq(schema.ideas.category, category))) as typeof query;
+  } else {
+    query = query.where(activeFilter) as typeof query;
   }
 
   if (sort === "score") {

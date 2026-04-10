@@ -1,5 +1,5 @@
 import { db, schema } from "@/db";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -55,6 +55,7 @@ export default async function Home() {
   const ideas = await db
     .select()
     .from(schema.ideas)
+    .where(eq(schema.ideas.status, "active"))
     .orderBy(desc(schema.ideas.id))
     .limit(20);
 
