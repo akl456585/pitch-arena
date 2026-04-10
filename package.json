@@ -8,8 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "db:migrate": "npx tsx src/db/migrate.ts",
-    "db:seed": "npx tsx src/scripts/seed.ts",
-    "generate": "npx tsx src/scripts/generate-idea.ts"
+    "db:seed": "npx tsx src/scripts/seed.ts"
   },
   "dependencies": {
     "dotenv": "^17.4.1",

@@ -442,10 +442,3 @@ A server-side Claude Code session can rebuild everything from this doc:
 8. Wait one tick of each. Verify a row appears in `ideas` (status starts as
    pending, flips to active within a few minutes).
 
-## Cleanup (after loops are verified working)
-
-- Delete `src/scripts/generate-idea.ts`
-- Remove `"generate"` script from `package.json`
-- Delete `src/lib/judges.ts` (personas now live in `judges-panel.md`)
-- Update `src/app/page.tsx` to filter `status='active'` so pending ideas
-  don't briefly flash on the leaderboard
