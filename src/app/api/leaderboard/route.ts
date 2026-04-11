@@ -4,19 +4,20 @@ import { desc, sql, eq } from "drizzle-orm";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  // Get top investors by portfolio value
+  // Only users who have actually invested at least once.
+  // INNER JOIN filters out ghost accounts (cookie-less visitors who never bet).
   const investors = await db
     .select({
       userId: schema.users.id,
       username: schema.users.username,
       balance: schema.users.balance,
-      totalInvested: sql<number>`coalesce(sum(${schema.investments.amount}), 0)`,
+      totalInvested: sql<number>`sum(${schema.investments.amount})`,
       investmentCount: sql<number>`count(${schema.investments.id})`,
     })
     .from(schema.users)
-    .leftJoin(schema.investments, eq(schema.users.id, schema.investments.userId))
+    .innerJoin(schema.investments, eq(schema.users.id, schema.investments.userId))
     .groupBy(schema.users.id)
-    .orderBy(desc(sql`coalesce(sum(${schema.investments.amount}), 0)`))
+    .orderBy(desc(sql`sum(${schema.investments.amount})`))
     .limit(50);
 
   // For each investor, calculate portfolio value

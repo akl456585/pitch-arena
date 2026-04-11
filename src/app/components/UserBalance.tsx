@@ -2,26 +2,25 @@
 
 import { useState, useEffect } from "react";
 
+type User = { username: string; balance: number | null } | null;
+
 export function UserBalance() {
-  const [balance, setBalance] = useState<number | null>(null);
-  const [username, setUsername] = useState<string | null>(null);
+  const [user, setUser] = useState<User>(null);
 
   useEffect(() => {
     fetch("/api/users")
       .then((r) => r.json())
-      .then((user) => {
-        setBalance(user.balance);
-        setUsername(user.username);
-      });
+      .then((data) => setUser(data));
   }, []);
 
-  if (balance === null) return null;
+  // Anonymous visitor — no row yet, render nothing.
+  if (!user) return null;
 
   return (
     <div className="flex items-center gap-2 text-sm">
-      <span className="text-zinc-500">{username}</span>
+      <span className="text-zinc-500">{user.username}</span>
       <span className="font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-        ${(balance || 0).toLocaleString()}
+        ${(user.balance || 0).toLocaleString()}
       </span>
     </div>
   );

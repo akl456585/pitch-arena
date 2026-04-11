@@ -62,7 +62,7 @@ export default async function Home() {
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Today&apos;s Pitches</h1>
+        <h1 className="text-3xl font-bold mb-2">Latest Pitches</h1>
         <p className="text-zinc-400">
           AI-generated startup ideas, judged by a panel of AI personalities.
         </p>
@@ -73,11 +73,7 @@ export default async function Home() {
           <p className="text-5xl mb-4">🏟️</p>
           <p className="text-lg font-medium">No pitches yet</p>
           <p className="text-sm mt-1">
-            Run{" "}
-            <code className="bg-zinc-800 px-2 py-0.5 rounded text-xs">
-              npm run generate
-            </code>{" "}
-            to generate the first one.
+            The generator runs every 2 hours — fresh ideas on the way.
           </p>
         </div>
       ) : (

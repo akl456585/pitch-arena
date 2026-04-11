@@ -64,6 +64,10 @@ export async function POST(request: Request) {
   return Response.json({
     success: true,
     investment: { ideaId, amount, priceAtInvestment: currentValuation },
-    balance: updatedUser.balance,
+    user: {
+      id: updatedUser.id,
+      username: updatedUser.username,
+      balance: updatedUser.balance,
+    },
   });
 }

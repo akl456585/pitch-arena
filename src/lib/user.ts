@@ -19,20 +19,32 @@ function generateUsername(): string {
   return `${adj}${noun}${num}`;
 }
 
-export async function getOrCreateUser() {
+/**
+ * Returns the current user if the cookie is set AND the row still exists.
+ * Never creates a row — safe to call on anonymous GETs like page loads.
+ */
+export async function getCurrentUser() {
   const cookieStore = await cookies();
   const userIdStr = cookieStore.get(COOKIE_NAME)?.value;
+  if (!userIdStr) return null;
 
-  if (userIdStr) {
-    const userId = Number(userIdStr);
-    const [existing] = await db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.id, userId))
-      .limit(1);
+  const userId = Number(userIdStr);
+  if (!Number.isFinite(userId)) return null;
 
-    if (existing) return existing;
-  }
+  const [existing] = await db
+    .select()
+    .from(schema.users)
+    .where(eq(schema.users.id, userId))
+    .limit(1);
+
+  return existing ?? null;
+}
+
+export async function getOrCreateUser() {
+  const existing = await getCurrentUser();
+  if (existing) return existing;
+
+  const cookieStore = await cookies();
 
   // Create new user
   let username = generateUsername();
