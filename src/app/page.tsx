@@ -73,7 +73,7 @@ export default async function Home() {
           <p className="text-5xl mb-4">🏟️</p>
           <p className="text-lg font-medium">No pitches yet</p>
           <p className="text-sm mt-1">
-            The generator runs every hour — fresh ideas on the way.
+            The generator runs every 2 hours — fresh ideas on the way.
           </p>
         </div>
       ) : (
