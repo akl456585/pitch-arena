@@ -16,7 +16,7 @@ export async function GET(
     .where(eq(schema.ideas.id, ideaId))
     .limit(1);
 
-  if (!idea) {
+  if (!idea || idea.status !== "active") {
     return Response.json({ error: "Idea not found" }, { status: 404 });
   }
 
