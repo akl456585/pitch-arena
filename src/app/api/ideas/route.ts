@@ -1,5 +1,5 @@
 import { db, schema } from "@/db";
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -10,14 +10,13 @@ export async function GET(request: Request) {
   const limit = Math.min(Number(searchParams.get("limit") || 20), 50);
   const offset = Number(searchParams.get("offset") || 0);
 
-  let query = db.select().from(schema.ideas);
-
   const activeFilter = eq(schema.ideas.status, "active");
-  if (category) {
-    query = query.where(and(activeFilter, eq(schema.ideas.category, category))) as typeof query;
-  } else {
-    query = query.where(activeFilter) as typeof query;
-  }
+  const whereClause = category
+    ? and(activeFilter, eq(schema.ideas.category, category))
+    : activeFilter;
+
+  let query = db.select().from(schema.ideas);
+  query = query.where(whereClause) as typeof query;
 
   if (sort === "score") {
     query = query.orderBy(desc(schema.ideas.overallScore)) as typeof query;
@@ -27,7 +26,10 @@ export async function GET(request: Request) {
     query = query.orderBy(desc(schema.ideas.id)) as typeof query;
   }
 
-  const ideas = await query.limit(limit).offset(offset);
+  const [ideas, [{ total }]] = await Promise.all([
+    query.limit(limit).offset(offset),
+    db.select({ total: count() }).from(schema.ideas).where(whereClause),
+  ]);
 
-  return Response.json({ ideas, count: ideas.length });
+  return Response.json({ ideas, count: total });
 }

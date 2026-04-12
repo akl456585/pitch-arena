@@ -30,9 +30,14 @@ export async function GET(
     .from(schema.marketEvents)
     .where(eq(schema.marketEvents.ideaId, ideaId));
 
+  let financials: unknown = {};
+  try {
+    financials = JSON.parse(idea.financials);
+  } catch {}
+
   return Response.json({
     ...idea,
-    financials: JSON.parse(idea.financials),
+    financials,
     judgements,
     marketEvents: events,
   });
