@@ -13,61 +13,71 @@ export async function POST(request: Request) {
     return Response.json({ error: "Invalid ideaId or amount" }, { status: 400 });
   }
 
+  // Early check (non-authoritative — real check is inside the transaction)
   if (amount > (user.balance || 0)) {
     return Response.json({ error: "Insufficient balance" }, { status: 400 });
   }
 
-  // Get idea
-  const [idea] = await db
-    .select()
-    .from(schema.ideas)
-    .where(eq(schema.ideas.id, ideaId))
-    .limit(1);
+  return await db.transaction(async (tx) => {
+    // Lock the user row and re-read balance inside the transaction
+    const [userRows] = await tx.execute(
+      sql`SELECT id, balance FROM users WHERE id = ${user.id} FOR UPDATE`
+    );
+    const lockedUser = (userRows as unknown as { id: number; balance: number }[])[0];
 
-  if (!idea) {
-    return Response.json({ error: "Idea not found" }, { status: 404 });
-  }
+    if (!lockedUser || (lockedUser.balance || 0) < amount) {
+      return Response.json({ error: "Insufficient balance" }, { status: 400 });
+    }
 
-  const currentValuation = idea.valuation || 1000;
+    // Lock the idea row to get a consistent valuation snapshot
+    const [ideaRows] = await tx.execute(
+      sql`SELECT id, valuation FROM ideas WHERE id = ${ideaId} FOR UPDATE`
+    );
+    const lockedIdea = (ideaRows as unknown as { id: number; valuation: number }[])[0];
 
-  // Create investment
-  await db.insert(schema.investments).values({
-    userId: user.id,
-    ideaId,
-    amount,
-    priceAtInvestment: currentValuation,
-  });
+    if (!lockedIdea) {
+      return Response.json({ error: "Idea not found" }, { status: 404 });
+    }
 
-  // Deduct from user balance
-  await db
-    .update(schema.users)
-    .set({ balance: sql`${schema.users.balance} - ${amount}` })
-    .where(eq(schema.users.id, user.id));
+    const currentValuation = lockedIdea.valuation || 1000;
 
-  // Increase idea's total invested and valuation
-  const valuationBoost = amount * 0.1;
-  await db
-    .update(schema.ideas)
-    .set({
-      totalInvested: sql`${schema.ideas.totalInvested} + ${amount}`,
-      valuation: sql`${schema.ideas.valuation} + ${valuationBoost}`,
-    })
-    .where(eq(schema.ideas.id, ideaId));
+    // All writes are now atomic within the transaction
+    await tx.insert(schema.investments).values({
+      userId: user.id,
+      ideaId,
+      amount,
+      priceAtInvestment: currentValuation,
+    });
 
-  // Fetch updated user
-  const [updatedUser] = await db
-    .select()
-    .from(schema.users)
-    .where(eq(schema.users.id, user.id))
-    .limit(1);
+    await tx
+      .update(schema.users)
+      .set({ balance: sql`${schema.users.balance} - ${amount}` })
+      .where(eq(schema.users.id, user.id));
 
-  return Response.json({
-    success: true,
-    investment: { ideaId, amount, priceAtInvestment: currentValuation },
-    user: {
-      id: updatedUser.id,
-      username: updatedUser.username,
-      balance: updatedUser.balance,
-    },
+    const valuationBoost = amount * 0.1;
+    await tx
+      .update(schema.ideas)
+      .set({
+        totalInvested: sql`${schema.ideas.totalInvested} + ${amount}`,
+        valuation: sql`${schema.ideas.valuation} + ${valuationBoost}`,
+      })
+      .where(eq(schema.ideas.id, ideaId));
+
+    // Read updated balance after deduction
+    const [updatedUser] = await tx
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.id, user.id))
+      .limit(1);
+
+    return Response.json({
+      success: true,
+      investment: { ideaId, amount, priceAtInvestment: currentValuation },
+      user: {
+        id: updatedUser.id,
+        username: updatedUser.username,
+        balance: updatedUser.balance,
+      },
+    });
   });
 }
