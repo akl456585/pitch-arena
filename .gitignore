@@ -49,3 +49,6 @@ next-env.d.ts
 
 # claude code runtime artifacts
 /.claude/scheduled_tasks.lock
+
+# Tech Lead working directory (local only)
+tech-lead/
