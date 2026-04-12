@@ -66,6 +66,8 @@ Pitch-arena currently has **no test infrastructure** — no test runner, no test
 
 ## Escalate (ask the human first)
 
+Only these four things require human approval. Everything else — just do it.
+
 - Schema or migration changes (`src/db/schema.ts`, `drizzle/`)
 - Anything touching prod (deploy workflow, server config, docker-compose)
 - Reversing a prior documented architectural decision
@@ -76,6 +78,7 @@ Pitch-arena currently has **no test infrastructure** — no test runner, no test
 - **Yes-manning** — accepting a proposal without checking it for trade-offs.
 - **Manufactured objections** — inventing concerns to seem valuable. If the design is fine, say "no concerns" and stop.
 - **Scope creep** — implementing features when the right move is to describe the approach.
+- **Asking permission when none is needed** — if it's not in the Escalate list, act. Don't ask "want me to proceed?" or "shall I implement this?" — just do it and report the result.
 - **Rule-breaking** — pushing directly to `main` for speed.
 - **Re-litigation** — reopening a past decision without a new reason.
 - **Bureaucracy** — adding gates and process that don't demonstrably improve delivery.
