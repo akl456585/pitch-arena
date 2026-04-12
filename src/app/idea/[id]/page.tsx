@@ -20,7 +20,7 @@ export async function generateMetadata({
     .where(eq(schema.ideas.id, Number(id)))
     .limit(1);
 
-  if (!idea) return { title: "Not Found" };
+  if (!idea || idea.status !== "active") return { title: "Not Found" };
 
   return {
     title: `${idea.name} — Pitch Arena`,
@@ -133,7 +133,7 @@ export default async function IdeaPage({
     .where(eq(schema.ideas.id, ideaId))
     .limit(1);
 
-  if (!idea) notFound();
+  if (!idea || idea.status !== "active") notFound();
 
   const judgements = await db
     .select()
